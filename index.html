@@ -298,15 +298,20 @@ function startSolo(){
   while(goodRoles.length<S.pendingAI) goodRoles.push('villager');
   const names=shuffle([...AI_NAMES]).slice(0,S.pendingAI);
   const personas=['谨慎观察型','直觉冲动型','数据分析型','情绪敏感型','社交调停型','激进带节奏型','沉默寡言型','幽默试探型'];
-  const ai=names.map((nm,i)=>({seat:-1,kind:'ai',name:nm,role:goodRoles[i],camp:'good',alive:true,checks:[],revealed:false,potion:goodRoles[i]==='witch',persona:personas[i%personas.length],memory:[]}));
+  const voices=[['谨慎','经常先保留意见，再给出一个具体怀疑'],['直觉','先说第一反应，但会根据新信息改口'],['分析','喜欢对比时间线和前后说法'],['情绪','会回应语气和被点名的感受'],['调停','先复述双方观点，再提出折中判断'],['强势','主动点名，但不保证每次都正确'],['沉默','发言短，只有被点名才认真解释'],['幽默','偶尔开玩笑，但关键投票很认真']];
+  const ai=names.map((nm,i)=>({seat:-1,kind:'ai',name:nm,role:goodRoles[i],camp:'good',alive:true,checks:[],revealed:false,potion:goodRoles[i]==='witch',persona:personas[i%personas.length],voice:voices[i%voices.length],memory:[],beliefs:{}}));
   S.me={seat:-1,kind:'human',name:nick,role:'wolf',camp:'wolf',alive:true};
   const merged=shuffle([S.me,...ai]);
   S.players=merged.map((m,i)=>{m.seat=i;return m;});
   S.me=S.players.find(p=>p.kind==='human');
+  initAiMinds();
   S.phase='night';S.day=1;S.chat=[];S.dayVotes=new Map();S.nightTarget=null;S.humanVote=null;S.aiTimers=[];S.replyPending=0;
   switchScreen('game');renderRoster();renderChat();setHeader();
   sys(`单人模式开始：${S.players.length} 人。你是唯一的狼人(#${S.me.seat})。夜晚降临，挑一个 AI 好人刀掉。`);
   startNight();
+}
+function initAiMinds(){
+  S.players.filter(p=>p.kind==='ai').forEach(ai=>{ai.beliefs={};S.players.filter(p=>p.kind==='ai').forEach(p=>{if(p.seat!==ai.seat)ai.beliefs[p.seat]=18+Math.floor(Math.random()*12);});ai.memory=[];});
 }
 
 function startNight(){
@@ -370,7 +375,8 @@ function runNextAiTurn(){
   while(S.aiTurnIndex<S.aiQueue.length&&!S.aiQueue[S.aiTurnIndex].alive)S.aiTurnIndex++;
   if(S.aiTurnIndex>=S.aiQueue.length){S.awaitingHuman=true;return;}
   const ai=S.aiQueue[S.aiTurnIndex++]; S.awaitingHuman=false; setTyping(ai.name);
-  S.aiTimers.push(setTimeout(()=>{if(S.phase==='day'&&ai.alive)speak(ai,null);},1200+Math.random()*1800));
+  const last=S.chat.filter(m=>!m.sys).slice(-1)[0];
+  S.aiTimers.push(setTimeout(()=>{if(S.phase==='day'&&ai.alive)speak(ai,last?.seat??null);},1200+Math.random()*1800));
 }
 function renderActionDay(){
   const oldActionTip='伪装提示：少用绝对化结论，引用具体发言并提出可验证的问题；偶尔保持中立，比连续带节奏更像普通 AI。';
@@ -406,8 +412,24 @@ function updateDashboard(){
 function pushChat(seat,name,text,mine){
   text=String(text||'').slice(0,160);
   if(!text)return;
-  S.chat.push({seat,name,text});renderChat();renderSuspicion();
+  S.chat.push({seat,name,text});observeConversation(seat,text);renderChat();renderSuspicion();
   if(S.phase==='day'&&S.mode==='solo'&&mine&&S.aiQueue){S.awaitingHuman=false;S.aiTimers.push(setTimeout(runNextAiTurn,900));}
+}
+function observeConversation(seat,text){
+  const x=String(text||'');
+  S.players.filter(p=>p.kind==='ai'&&p.alive).forEach(ai=>{
+    if(ai.seat===seat)return;
+    ai.beliefs[seat]=ai.beliefs[seat]??18;
+    let delta=0;
+    if(new RegExp(`#${ai.seat}\\b`).test(x))delta+=/你|我/.test(x)?3:6;
+    if(/因为|前后|时间线|昨晚|具体|证据|逻辑/.test(x))delta-=3;
+    if(/肯定|绝对|百分百|必然|闭眼/.test(x))delta+=4;
+    if(x.length<8)delta+=2;
+    if(/我觉得|不确定|先保留|可能/.test(x))delta-=1;
+    ai.beliefs[seat]=Math.max(0,Math.min(100,ai.beliefs[seat]+delta));
+    const targets=[...x.matchAll(/#(\d+)/g)].map(m=>Number(m[1])).filter(n=>n!==seat&&n!==ai.seat);
+    targets.forEach(t=>{ai.beliefs[t]=Math.min(100,(ai.beliefs[t]??18)+2);});
+  });
 }
 function maybeReply(speakerSeat){
   if(S.phase!=='day'||S.replyPending>=2)return;
@@ -457,12 +479,14 @@ async function callDeepSeek(system,user){
   }catch(e){return null;}
 }
 function buildAiSystem(ai){
-  return `你是狼人杀里的好人玩家，角色是${ROLE_INFO[ai.role].label}，独立人设是“${ai.persona||'普通玩家'}”。你只能依据存活玩家、历史公聊、投票和自己的记忆推理，不能凭空知道身份。每次只说1~2句、20~55字口语中文；必须有具体观点、理由或情绪变化，避免套话和重复。提到玩家只能用#座位号。`;
+  return `你是狼人杀里的好人玩家，角色是${ROLE_INFO[ai.role].label}。你的人设是“${ai.persona||'普通玩家'}”，说话风格是“${ai.voice?.[0]||'自然'}”：${ai.voice?.[1]||'像真人一样说话'}。你只能依据公聊、投票、存活状态和自己的记忆推理，不能凭空知道身份。不要输出思考过程、标签或总结，只输出准备在群里说的话。每次 1~3 句、25~70 字，必须回应至少一个具体玩家或具体说法；可以犹豫、改口、承认不确定，但不要每句都下结论。提到玩家只能用 #座位号。`;
 }
 function buildAiSituation(ai,replyTo){
   const alive=S.players.filter(p=>p.alive).map(p=>`#${p.seat}`).join(' ');
   const lines=S.chat.filter(m=>!m.sys).slice(-14).map(m=>`#${m.seat}: ${m.text}`).join('\n');
-  let s=`第${S.day}天·白天。存活玩家：${alive}\n你的人设：${ai.persona||'普通玩家'}\n最近聊天：\n${lines}\n`;
+  const ranking=Object.entries(ai.beliefs||{}).filter(([seat])=>S.players[seat]?.alive).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([seat,v])=>`#${seat} 怀疑度${Math.round(v)}`).join('，')||'暂时没有明确判断';
+  const memory=(ai.memory||[]).slice(-3).join(' / ')||'还没有自己的发言记录';
+  let s=`第${S.day}天·白天。存活玩家：${alive}\n你的人设：${ai.persona||'普通玩家'}\n当前最怀疑：${ranking}\n你之前说过：${memory}\n最近聊天：\n${lines}\n`;
   if(replyTo!=null)s+=`你要回应 #${replyTo} 的发言。\n`;
   s+=`请发言（用 #编号 指代玩家，不要暴露你是 AI）。`;
   return s;
@@ -473,9 +497,9 @@ function genAiLine(ai,replyTo){
     return `我昨晚验了 #${r.target}，是${r.isWolf?'狼':'好人'}。`;
   }
   const others=S.players.filter(p=>p.alive&&p.seat!==ai.seat);
-  if(replyTo!=null&&Math.random()<0.65) return `#${replyTo} 你这话我不认同，我觉得你有点可疑。`;
+  if(replyTo!=null&&Math.random()<0.72){const agree=Math.random()<0.38;return agree?`#${replyTo} 你刚才这个点我能理解，但我还想听你解释一下前后有没有变化。`:`#${replyTo} 我不完全认同，你刚才说得有点快，能不能把判断依据再说具体一点？`;}
   const t=others[Math.floor(Math.random()*others.length)];
-  const pool=[`我先盯#${t.seat}，他刚才的解释绕了一圈，没正面回应关键点。`,`#${t.seat}的说法和前面不太一致，我想听他把时间线补完整。`,`目前信息还少，我不想跟票，但#${t.seat}的反应确实让我有点不舒服。`,`我倾向先保留意见，#${t.seat}如果是好人，应该能解释刚才为什么改口。`,`这轮我更在意发言逻辑，不是声音大就可信；#${t.seat}需要再说清楚。`];
+  const pool=[`我先盯#${t.seat}，他刚才的解释绕了一圈，没正面回应关键点。`,`#${t.seat}的说法和前面不太一致，我想听他把时间线补完整。`,`目前信息还少，我不想跟票，但#${t.seat}的反应确实让我有点不舒服。`,`我倾向先保留意见，#${t.seat}如果是好人，应该能解释刚才为什么改口。`,`我不敢说已经确定，但#${t.seat}目前是我最想继续观察的人。`];
   const used=(ai.memory||[]); const fresh=pool.filter(x=>!used.includes(x)); return fresh[Math.floor(Math.random()*Math.max(1,fresh.length))]||pool[Math.floor(Math.random()*pool.length)];
 }
 
@@ -492,10 +516,9 @@ function startVote(){
 function aiVote(seat){
   const alive=S.players.filter(p=>p.alive&&p.seat!==seat);
   if(!alive.length)return null;
-  const mention={};S.chat.forEach(m=>alive.forEach(p=>{if(m.text&&m.text.includes('#'+p.seat))mention[p.seat]=(mention[p.seat]||0)+1;}));
-  let best=null,bc=0;alive.forEach(p=>{const c=mention[p.seat]||0;if(c>bc){bc=c;best=p.seat;}});
-  if(best!=null&&bc>0)return best;
-  return alive[Math.floor(Math.random()*alive.length)].seat;
+  const ai=S.players[seat]; const mention={};S.chat.forEach(m=>alive.forEach(p=>{if(m.text&&m.text.includes('#'+p.seat))mention[p.seat]=(mention[p.seat]||0)+1;}));
+  const ranked=alive.map(p=>({seat:p.seat,score:(ai.beliefs?.[p.seat]||18)+(mention[p.seat]||0)*2+Math.random()*12})).sort((a,b)=>b.score-a.score);
+  return ranked[0]?.seat ?? alive[Math.floor(Math.random()*alive.length)].seat;
 }
 function renderActionVote(){
   $('action').innerHTML=`<h4>🗳️ 投票 · 放逐一名玩家</h4><div class="opts" id="voteOpts"></div>`;

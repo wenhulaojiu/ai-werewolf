@@ -11,6 +11,7 @@ public/app-enhancements.js  体验增强入口
 src/game-design.md          核心循环与设计目标
 src/ai-behavior.md          AI 行为与接口说明
 src/roles.md                角色说明
+src/ai-dialogue.md          AI 真人感对话设计
 server.js                   本地静态服务
 启动游戏.bat                Windows 一键启动
 tools/check-project.mjs     工程结构检查
@@ -23,3 +24,7 @@ tools/check-project.mjs     工程结构检查
 安装 Node.js 18+ 后，也可以双击 `启动游戏.bat`，或执行 `npm start`，然后打开 `http://localhost:5179`。
 
 API Key 是可选项。留空使用本地模拟 AI；密钥只保存在浏览器本地，不要写入 GitHub 仓库。
+
+## 真人感 AI 发言
+
+AI 不再只随机生成一句话：每个角色拥有独立人格、最近发言记忆和对其他座位的怀疑度；白天会优先回应上一位发言者，投票会参考自己的判断、被点名情况和少量随机性。详细设计见 `src/ai-dialogue.md`。
