@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI伪装狼人杀 · 角色版</title>
+<style>
+  :root{
+    /* 午夜议会 · 暖色暗调（无外部字体，系统字体即可） */
+    --bg:#14110f; --bg-2:#1a1614;
+    --surface:#221d1a; --surface-2:#2b2521;
+    --line:rgba(255,233,205,.10); --line-2:rgba(255,233,205,.16);
+    --ink:#f3ece2; --muted:#a89c8c;
+    --wolf:#e0594b; --good:#7bbf86; --gold:#e8b765; --moon:#cdd6e8; --me:#e07a5f;
+    --ember:linear-gradient(135deg,#e07a5f,#e8b765);
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --r-lg:18px; --r-md:13px; --r-sm:10px;
+    --ease:cubic-bezier(.22,1,.36,1);
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(820px 460px at 82% -8%, rgba(232,183,101,.10), transparent 60%),
+      radial-gradient(700px 420px at -5% 108%, rgba(224,89,75,.08), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--font); line-height:1.5;
+    -webkit-tap-highlight-color:transparent;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  #app{max-width:720px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:14px 14px 18px}
+  .screen{display:none;flex:1;flex-direction:column;gap:14px}
+  .screen.on{display:flex;animation:rise .45s var(--ease) both}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow)}
+  .hero{padding:6px 4px 2px;text-align:center}
+  .title{font-size:clamp(26px,7vw,38px);font-weight:850;margin:0;letter-spacing:.02em;color:var(--ink);text-shadow:0 2px 18px rgba(232,183,101,.12)}
+  .title .w{color:var(--wolf)}
+  .tagline{color:var(--muted);margin:10px auto 0;line-height:1.65;font-size:13.5px;max-width:34ch}
+  .tagline b{color:var(--wolf);font-weight:700}
+
+  .field{margin:14px 0}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+  input[type=text]{width:100%;padding:13px 14px;border-radius:var(--r-md);border:1px solid var(--line);background:#0e0c0b;color:var(--ink);font-size:16px;outline:none;transition:.16s var(--ease);font-family:var(--font)}
+  input[type=text]:focus{border-color:var(--me);box-shadow:0 0 0 3px rgba(224,122,95,.18)}
+  input::placeholder{color:#7d7366}
+  .stepper{display:flex;align-items:center;gap:16px}
+  .stepper button{width:42px;height:42px;border-radius:var(--r-md);border:1px solid var(--line);background:#0e0c0b;color:var(--ink);font-size:22px;cursor:pointer;transition:.14s var(--ease);line-height:1}
+  .stepper button:active{transform:scale(.94)}
+  .stepper button:focus-visible{outline:2px solid var(--me);outline-offset:2px}
+  .stepper .num{font-size:23px;font-weight:800;min-width:30px;text-align:center;font-variant-numeric:tabular-nums}
+  .stepper .total{color:var(--muted);font-size:13.5px;margin-left:auto}
+  .stepper .total b{color:var(--ink)}
+
+  .roles{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:6px 0 4px}
+  .roles .r{font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 11px;background:#0e0c0b}
+  .roles .r b{color:var(--ink)}
+  .roles .r .ic{font-size:14px;margin-right:5px}
+
+  .btn{width:100%;padding:15px;border:none;border-radius:14px;cursor:pointer;font-size:16px;font-weight:800;color:#1a120c;background:var(--ember);box-shadow:0 10px 24px rgba(224,122,95,.30);transition:transform .12s var(--ease),filter .12s;font-family:var(--font)}
+  .btn:active{transform:translateY(1px);filter:brightness(1.05)}
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .btn.ghost{background:var(--surface-2);border:1px solid var(--line-2);box-shadow:none;color:var(--ink);width:auto;padding:12px 18px;font-weight:700}
+  .btn.ghost:active{transform:translateY(1px)}
+  .row2{display:flex;gap:10px;margin-top:10px}
+  .hint{font-size:12px;color:var(--muted);text-align:center;margin-top:12px;line-height:1.65}
+  .hint b{color:var(--gold)}
+  .banner{font-size:12.5px;color:var(--moon);background:rgba(205,214,232,.08);border:1px solid rgba(205,214,232,.18);border-radius:var(--r-sm);padding:10px 12px;line-height:1.6;margin-bottom:4px}
+  details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+  details summary{cursor:pointer;color:var(--muted);font-size:13px;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸ ";color:var(--me)}
+  details[open] summary::before{content:"▾ "}
+  details .body{font-size:12.5px;color:var(--muted);line-height:1.7;margin-top:8px}
+  details .body b{color:var(--ink)}
+
+  .topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .badge{font-size:13px;font-weight:800;padding:7px 13px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);display:inline-flex;align-items:center;gap:6px}
+  .badge.night{color:var(--moon);box-shadow:0 0 0 1px rgba(205,214,232,.35) inset,0 0 16px rgba(205,214,232,.18)}
+  .badge.day{color:var(--gold);box-shadow:0 0 0 1px rgba(232,183,101,.35) inset}
+  .badge.vote{color:var(--wolf);box-shadow:0 0 0 1px rgba(224,89,75,.4) inset}
+  .badge.over{color:var(--good)}
+  .grow{flex:1}
+  .meinfo{font-size:13px;color:var(--muted)}
+  .meinfo b{color:var(--me)}
+
+  .board{display:flex;gap:12px;flex:1;min-height:0}
+  .roster{width:148px;flex:none;display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:2px}
+  .seat{display:flex;align-items:center;gap:9px;padding:9px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--line);transition:.16s var(--ease)}
+  .seat.dead{opacity:.4}
+  .seat.me{border-color:var(--me);box-shadow:0 0 0 1px var(--me) inset}
+  .av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#15110d;flex:none;font-size:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+  .seat .meta{overflow:hidden;min-width:0}
+  .seat .nm{font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seat .rl{font-size:11px;color:var(--muted)}
+  .rl.wolf{color:var(--wolf)} .rl.seer{color:var(--moon)} .rl.witch{color:#c9a6f5} .rl.hunter{color:var(--gold)} .rl.villager{color:var(--muted)}
+  .chatwrap{flex:1;display:flex;flex-direction:column;min-width:0}
+  .chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:11px;padding:4px}
+  .msg{display:flex;gap:10px;animation:rise .32s var(--ease) both}
+  .msg .av{width:33px;height:33px;font-size:14px;border-radius:10px}
+  .msg .b .who{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .msg .b .tx{font-size:14.5px;line-height:1.55;background:var(--surface);border:1px solid var(--line);padding:10px 13px;border-radius:4px 13px 13px 13px;word-break:break-word}
+  .msg.sys{justify-content:center}
+  .msg.sys .s{font-size:12px;color:var(--muted);background:rgba(255,255,255,.04);padding:6px 13px;border-radius:999px;text-align:center;line-height:1.5}
+  .msg.me .b .tx{border-color:var(--me);background:rgba(224,122,95,.12);border-radius:13px 4px 13px 13px}
+  .msg.typing{opacity:.85}
+  .msg.typing .s{display:inline-flex;gap:4px;align-items:center;font-size:12px;color:var(--muted);background:rgba(255,255,255,.04);padding:8px 13px;border-radius:999px}
+  .msg.typing .dot{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:blink 1.1s infinite}
+  .msg.typing .dot:nth-child(2){animation-delay:.18s}
+  .msg.typing .dot:nth-child(3){animation-delay:.36s}
+  @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+  .action{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow)}
+  .action h4{margin:0 0 11px;font-size:13px;color:var(--muted);font-weight:700}
+  .opts{display:flex;flex-wrap:wrap;gap:9px}
+  .opt{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border-radius:var(--r-md);border:1px solid var(--line);background:#0e0c0b;color:var(--ink);cursor:pointer;font-size:14px;transition:.14s var(--ease);font-family:var(--font)}
+  .opt:hover{border-color:var(--me);transform:translateY(-1px)}
+  .opt:active{transform:translateY(0)}
+  .opt:focus-visible{outline:2px solid var(--me);outline-offset:2px}
+  .opt.sel{border-color:var(--wolf);background:rgba(224,89,75,.14);color:#fff}
+  .opt.kill{border-color:rgba(224,89,75,.5)}
+  .opt.vote{border-color:rgba(205,214,232,.5)}
+  .row{display:flex;gap:9px}
+  .row input{flex:1}
+  .row button{padding:0 20px;border-radius:var(--r-md);border:none;background:var(--ember);color:#1a120c;font-weight:800;cursor:pointer;font-size:15px;font-family:var(--font)}
+  .row button:active{transform:translateY(1px)}
+  .row button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .over-card{text-align:center;padding:26px 18px}
+  .verdict{font-size:34px;font-weight:900;margin:4px 0;letter-spacing:.04em}
+  .verdict.win{color:var(--wolf)} .verdict.lose{color:var(--good)}
+  .reveal{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0}
+  .reveal .seat{width:100%}
+  .status{font-size:13px;color:var(--moon);text-align:center;margin:10px 0 2px;min-height:18px;line-height:1.5}
+
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* 手机端：名单改为顶部横向滚动条，聊天占满 */
+  @media (max-width:560px){
+    .board{flex-direction:column}
+    .roster{flex-direction:row;width:auto;overflow-x:auto;padding-bottom:4px;gap:8px}
+    .seat{flex:none;min-width:128px}
+    .reveal{grid-template-columns:1fr 1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 单人开始 -->
+  <section id="solo-start" class="screen on">
+    <div class="hero">
+      <h1 class="title">AI伪装<span class="w">狼人杀</span></h1>
+      <p class="tagline">你是唯一的<b>狼人</b>，其余 AI 扮演预言家 / 女巫 / 猎人 / 村民。夜晚刀掉 AI，白天伪装成 AI 带偏它们的投票。</p>
+    </div>
+    <div class="panel">
+      <div class="field"><label>你的昵称</label><input id="nick" type="text" placeholder="输入昵称（≤12字）" maxlength="12"></div>
+      <div class="field"><label>AI 数量（你 + 他们 = 总人数）</label>
+        <div class="stepper"><button id="aiMinus" aria-label="减少">−</button><span class="num" id="aiNum">4</span><button id="aiPlus" aria-label="增加">+</button>
+        <span class="total">共 <b id="totalNum">5</b> 人</span></div>
+      </div>
+      <div class="roles">
+        <div class="r"><span class="ic">🐺</span><b>狼人</b>：你（每晚刀人）</div>
+        <div class="r"><span class="ic">🔮</span><b>预言家</b>：每晚验一人</div>
+        <div class="r"><span class="ic">🧪</span><b>女巫</b>：解药救被刀者</div>
+        <div class="r"><span class="ic">🏹</span><b>猎人</b>：出局可开枪</div>
+      </div>
+      <button class="btn" id="btnStart">开始单人游戏</button>
+      <p class="hint">AI 会慢慢回话（每条 <b>4~6 秒</b>）并接你的话；指代别人都用 <b>#编号</b>。</p>
+      <details>
+        <summary>怎么玩 / 规则</summary>
+        <div class="body">
+          • <b>你是狼人</b>，其余全是 AI 好人（含神职）。<br>
+          • <b>黑夜</b>：你点一个 AI 刀掉；女巫可能救、预言家会验人。<br>
+          • <b>白天</b>：你用 AI 好人的语气发言伪装，发言前会显示「正在输入…」。<br>
+          • <b>投票</b>：放逐一人；AI 按谁被点名多来投，你演得像就能活到最后。<br>
+          • 用 <b>#座位号</b> 指代具体的人（如「#3 你有点可疑」）。<br>
+          • AI 全灭→你赢；你被投出→AI 赢。
+        </div>
+      </details>
+      <details>
+        <summary>🔧 AI 设置（接入 DeepSeek，可选）</summary>
+        <div class="body">
+          <div class="field" style="margin:10px 0 4px"><label>OpenAI API Key（仅保存在本机）</label><input id="dsKey" type="password" placeholder="sk-... 留空则用本地模拟" style="font-size:13px"></div>
+          <div class="field" style="margin:4px 0"><label>模型（固定 gpt-5.6-sol）</label><input id="dsModel" type="text" value="gpt-5.6-sol" readonly style="font-size:13px;opacity:.8"></div>
+          <p style="font-size:11.5px;color:var(--muted);margin:4px 0 0;line-height:1.6">不填也能玩（AI 走本地模拟）。填了就接真实大模型，更像真人。Key 只存在你本机浏览器，不会发到别处。</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 游戏屏 -->
+  <section id="game" class="screen">
+    <div class="topbar">
+      <span class="badge" id="phaseTag">准备</span>
+      <span class="badge" id="dayTag">第 1 天</span>
+      <span class="grow"></span>
+      <span class="meinfo">你是 <b>狼人</b> · 座位 #<b id="mySeat">0</b></span>
+    </div>
+    <div class="board">
+      <div class="roster" id="roster"></div>
+      <div class="chatwrap">
+        <div class="chat" id="chat"></div>
+        <div class="action" id="action"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 结算 -->
+  <section id="over" class="screen">
+    <div class="panel over-card">
+      <div id="verdict" class="verdict"></div>
+      <p id="verdictSub" style="color:var(--muted);margin:0"></p>
+      <div class="reveal" id="reveal"></div>
+      <button class="btn again" id="btnAgain">再来一局</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const AV_COLORS=['#e07a5f','#e8b765','#7bbf86','#cdd6e8','#e0594b','#f0a35e','#c9a6f5','#7fc8d8','#9ccc8a','#f08fb0'];
+function colorFor(i){return AV_COLORS[i%AV_COLORS.length];}
+const AI_NAMES=['小艾','阿吉','默默','老白','小琳','大壮','婷婷','阿福','果果','晨晨','二两','阿七','丸子','阿树'];
+const ROLE_INFO={
+  wolf:{label:'狼人'}, seer:{label:'预言家'}, witch:{label:'女巫'}, hunter:{label:'猎人'}, villager:{label:'村民'}
+};
+function av(seat,name){return `<div class="av" style="background:${colorFor(seat)}">${String(name).slice(0,1)}</div>`;}
+// 本版本不使用预言家：所有 AI 仅通过公聊、投票和存活状态推理
+delete ROLE_INFO.seer;
+
+/* 全局状态 */
+const S={ mode:'solo', phase:'night', day:1, me:null, players:[], chat:[], pendingAI:4,
+          nightTarget:null, humanVote:null, dayVotes:new Map(), aiTimers:[], replyPending:0 };
+
+const FALLBACK=[
+  '我觉得 #{t} 今天发言有点绕，先观察下。',
+  '现在信息太少，我倾向先保好人，谁跳得凶留意谁。',
+  '#{t} 你刚才那句我没太懂，能展开说说吗？',
+  '我是好人，大家别乱刀，看看明天谁还活着。',
+  '感觉场上有人带节奏，建议谨慎投票。',
+  '第 {d} 天了还没头绪，先跟大流吧。',
+  '#{t} 你这么安静，反而让我有点在意。',
+  '我要是狼我早跳了，稳一点总没错。',
+  '说实话我也拿不准，但 #{t} 的语气怪怪的。',
+  '别急着投，再多聊一轮咱们再定。'
+];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function escapeHtml(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function sys(text){S.chat.push({sys:true,text});renderChat();}
+function clearTimers(){S.aiTimers.forEach(t=>clearTimeout(t));S.aiTimers=[];}
+let typingEl=null;
+function setTyping(name){
+  const c=$('chat');
+  if(typingEl){typingEl.remove();typingEl=null;}
+  if(!name)return;
+  typingEl=document.createElement('div');typingEl.className='msg sys typing';
+  typingEl.innerHTML=`<div class="s">${escapeHtml(name)} 正在输入<span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+  c.appendChild(typingEl);c.scrollTop=c.scrollHeight;
+}
+
+/* ===================== 单人模式 ===================== */
+function startSolo(){
+  const nick=($('nick').value||'我').trim().slice(0,12)||'我';
+  S.pendingAI=Math.max(3,Math.min(8,S.pendingAI|0));
+  S.mode='solo';
+  const goodRoles=['witch','hunter'];
+  while(goodRoles.length<S.pendingAI) goodRoles.push('villager');
+  const names=shuffle([...AI_NAMES]).slice(0,S.pendingAI);
+  const personas=['谨慎观察型','直觉冲动型','数据分析型','情绪敏感型','社交调停型','激进带节奏型','沉默寡言型','幽默试探型'];
+  const ai=names.map((nm,i)=>({seat:-1,kind:'ai',name:nm,role:goodRoles[i],camp:'good',alive:true,checks:[],revealed:false,potion:goodRoles[i]==='witch',persona:personas[i%personas.length],memory:[]}));
+  S.me={seat:-1,kind:'human',name:nick,role:'wolf',camp:'wolf',alive:true};
+  const merged=shuffle([S.me,...ai]);
+  S.players=merged.map((m,i)=>{m.seat=i;return m;});
+  S.me=S.players.find(p=>p.kind==='human');
+  S.phase='night';S.day=1;S.chat=[];S.dayVotes=new Map();S.nightTarget=null;S.humanVote=null;S.aiTimers=[];S.replyPending=0;
+  switchScreen('game');renderRoster();renderChat();setHeader();
+  sys(`单人模式开始：${S.players.length} 人。你是唯一的狼人(#${S.me.seat})。夜晚降临，挑一个 AI 好人刀掉。`);
+  startNight();
+}
+
+function startNight(){
+  S.phase='night';clearTimers();setHeader();
+  const targets=S.players.filter(p=>p.alive&&p.kind==='ai');
+  if(targets.length===0){resolveNight();return;}
+  sys(`第 ${S.day} 天 · 黑夜：选择要刀掉的 AI 好人（你不能刀自己）。`);
+  renderActionNight();
+}
+function renderActionNight(){
+  const box=$('action');
+  box.innerHTML=`<h4>🌙 黑夜 · 刀人（只能刀 AI 好人）</h4><div class="opts" id="killOpts"></div>`;
+  const wrap=$('killOpts');
+  S.players.filter(p=>p.alive&&p.kind==='ai').forEach(t=>{
+    const b=document.createElement('button');b.className='opt kill';
+    b.innerHTML=av(t.seat,t.name)+`<span>${t.name}</span> <span class="rl">身份未知</span>`;
+    b.onclick=()=>onNightKill(t.seat);
+    wrap.appendChild(b);
+  });
+}
+function onNightKill(seat){
+  if(S.phase!=='night')return;
+  S.nightTarget=seat;const t=S.players[seat];
+  sys(`你选择刀掉 #${seat}（身份未知）。`);
+  resolveNight();
+}
+function resolveNight(){
+  if(S.phase!=='night')return;clearTimers();
+  let seat=S.nightTarget;
+  if(seat==null){const ais=S.players.filter(p=>p.alive&&p.kind==='ai');if(ais.length)seat=ais[Math.floor(Math.random()*ais.length)].seat;}
+  let dead=null;const t=seat!=null?S.players[seat]:null;
+  const witch=S.players.find(p=>p.alive&&p.role==='witch');
+  let saved=false;
+  if(t&&t.alive&&witch&&witch.potion&&t.role!=='wolf'){witch.potion=false;saved=true;sys(`🌙 女巫使用解药，救了 #${t.seat}（${ROLE_INFO[t.role].label}）。`);}
+  if(t&&t.alive&&!saved){t.alive=false;dead=t;}
+  if(dead){sys(`🌙 天亮了：#${dead.seat} 昨晚出局。`);if(dead.role==='hunter')hunterShoot(dead.seat);}
+  else sys(`🌙 天亮了：昨晚无人出局。`);
+  renderRoster();
+  if(checkWin())return;
+  startDay();
+}
+function hunterShoot(hseat){
+  const cand=S.players.filter(p=>p.alive&&p.seat!==hseat);
+  if(!cand.length)return;
+  const mention={};S.chat.forEach(m=>cand.forEach(p=>{if(m.text&&m.text.includes('#'+p.seat))mention[p.seat]=(mention[p.seat]||0)+1;}));
+  let best=null,bc=0;cand.forEach(p=>{const c=mention[p.seat]||0;if(c>bc){bc=c;best=p.seat;}});
+  const target=(best!=null&&bc>0)?best:cand[Math.floor(Math.random()*cand.length)].seat;
+  S.players[target].alive=false;
+  sys(`🔫 猎人 #${hseat} 出局并开枪带走了 #${target}。`);
+  renderRoster();
+}
+
+function startDay(){
+  S.phase='day';clearTimers();setHeader();S.aiQueue=S.players.filter(p=>p.alive&&p.kind==='ai').sort((a,b)=>a.seat-b.seat);S.aiTurnIndex=0;S.awaitingHuman=true;
+  sys(`☀️ 第 ${S.day} 天 · 白天发言。用 AI 好人的语气伪装，别露狼味；也可误导它们去投别的 AI。`);
+  renderActionDay();
+  runNextAiTurn();
+}
+function runNextAiTurn(){
+  if(S.phase!=='day'||!S.aiQueue)return;
+  while(S.aiTurnIndex<S.aiQueue.length&&!S.aiQueue[S.aiTurnIndex].alive)S.aiTurnIndex++;
+  if(S.aiTurnIndex>=S.aiQueue.length){S.awaitingHuman=true;return;}
+  const ai=S.aiQueue[S.aiTurnIndex++]; S.awaitingHuman=false; setTyping(ai.name);
+  S.aiTimers.push(setTimeout(()=>{if(S.phase==='day'&&ai.alive)speak(ai,null);},1200+Math.random()*1800));
+}
+function renderActionDay(){
+  const oldActionTip='伪装提示：少用绝对化结论，引用具体发言并提出可验证的问题；偶尔保持中立，比连续带节奏更像普通 AI。';
+  $('action').innerHTML=`<h4>☀️ 白天 · 发言（你是狼人 #${S.me.seat}，请伪装）</h4>
+   <div class="row"><input id="sayInput" type="text" placeholder="发言，用 #编号 指代别人…" maxlength="140"><button id="sayBtn">发送</button></div>
+   <div style="margin-top:11px"><button class="btn ghost" id="toVote" style="width:auto;padding:10px 17px">⏭ 进入投票</button></div>`;
+  const send=()=>{const v=$('sayInput').value.trim();if(v){if(S.aiQueue&&!S.awaitingHuman)return;pushChat(S.me.seat,S.me.name,v,true);$('sayInput').value='';};};
+  $('sayBtn').onclick=send;
+  $('sayInput').addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+  $('toVote').onclick=()=>{if(S.phase==='day')startVote();};
+  const tip=document.createElement('div'); tip.className='banner'; tip.textContent=oldActionTip; $('action').insertBefore(tip,$('action').firstChild); renderSuspicion();
+}
+function renderSuspicion(){
+  const a=$('action'); if(!a||!S.me||S.phase!=='day')return;
+  let box=$('suspicionPanel'); if(!box){box=document.createElement('div');box.id='suspicionPanel';box.className='banner';a.insertBefore(box,a.firstChild);}
+  const ais=S.players.filter(p=>p.alive&&p.kind==='ai');
+  box.innerHTML='<b>AI 对你的怀疑度（估算）</b> '+ais.map(ai=>{const mine=S.chat.filter(m=>!m.sys&&m.seat===S.me.seat);let score=15;mine.forEach(m=>{const x=m.text||'';if(/怀疑|肯定|绝对|百分百/.test(x))score+=8;if((x.match(/#\d+/g)||[]).length===0)score+=3;if(x.length<8||x.length>120)score+=2;});const aiTalk=S.chat.filter(m=>!m.sys&&m.seat===ai.seat);if(aiTalk.some(m=>/你说得对|我也这么想/.test(m.text||'')))score+=4;const pct=Math.min(95,score);return `#${ai.seat} ${pct}%`;}).join(' · ');
+}
+function pushChat(seat,name,text,mine){
+  text=String(text||'').slice(0,160);
+  if(!text)return;
+  S.chat.push({seat,name,text});renderChat();renderSuspicion();
+  if(S.phase==='day'&&S.mode==='solo'&&mine&&S.aiQueue){S.awaitingHuman=false;S.aiTimers.push(setTimeout(runNextAiTurn,900));}
+}
+function maybeReply(speakerSeat){
+  if(S.phase!=='day'||S.replyPending>=2)return;
+  const cand=S.players.filter(p=>p.alive&&p.kind==='ai'&&p.seat!==speakerSeat);
+  if(!cand.length)return;
+  const ai=cand[Math.floor(Math.random()*cand.length)];
+  S.replyPending++;
+  const delay=4500+Math.random()*1500;
+  S.aiTimers.push(setTimeout(()=>setTyping(ai.name),Math.max(0,delay-1800)));
+  S.aiTimers.push(setTimeout(()=>{S.replyPending--;if(S.phase!=='day'||!ai.alive){setTyping(null);return;}speak(ai,speakerSeat);},delay));
+}
+function speak(ai,replyTo){
+  if(S.phase!=='day'||!ai.alive)return;
+  // 预言家当众揭露（本地即时，不依赖 API）
+  if(ai.role==='seer'&&!ai.revealed&&ai.checks.length&&Math.random()<0.7){
+    ai.revealed=true;const r=ai.checks[ai.checks.length-1];
+    setTyping(null);
+    pushChat(ai.seat,ai.name,`我昨晚验了 #${r.target}，是${r.isWolf?'狼':'好人'}。`);
+    return;
+  }
+  const sys=buildAiSystem(ai);
+  const usr=buildAiSituation(ai,replyTo);
+  callDeepSeek(sys,usr).then(text=>{
+    setTyping(null);
+    let finalText=(text&&text.trim())?text.trim().slice(0,160):genAiLine(ai,replyTo);
+    const recent=S.chat.filter(m=>m.seat===ai.seat&&!m.sys).slice(-3).map(m=>m.text);
+    if(recent.includes(finalText)) finalText=genAiLine(ai,replyTo);
+    ai.memory=ai.memory||[]; ai.memory.push(finalText); ai.memory=ai.memory.slice(-8);
+    if(S.phase==='day'&&ai.alive){pushChat(ai.seat,ai.name,finalText);S.awaitingHuman=true;}
+  }).catch(()=>{setTyping(null);if(S.phase==='day'&&ai.alive){pushChat(ai.seat,ai.name,genAiLine(ai,replyTo));S.awaitingHuman=true;}});
+}
+async function callDeepSeek(system,user){
+  const key=localStorage.getItem('dw_ds_key');
+  if(!key)return null;
+  const model='gpt-5.6-sol';
+  const endpoint=localStorage.getItem('dw_ai_endpoint')||'https://credits.openai-next.com/api/v1/chat/completions';
+  try{
+    const r=await fetch(endpoint,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model,messages:[{role:'system',content:system},{role:'user',content:user}],temperature:0.8,max_tokens:120,reasoning_effort:'medium'})
+    });
+    if(!r.ok)return null;
+    const j=await r.json();
+    const c=j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content;
+    return c?String(c).trim():null;
+  }catch(e){return null;}
+}
+function buildAiSystem(ai){
+  return `你是狼人杀里的好人玩家，角色是${ROLE_INFO[ai.role].label}，独立人设是“${ai.persona||'普通玩家'}”。你只能依据存活玩家、历史公聊、投票和自己的记忆推理，不能凭空知道身份。每次只说1~2句、20~55字口语中文；必须有具体观点、理由或情绪变化，避免套话和重复。提到玩家只能用#座位号。`;
+}
+function buildAiSituation(ai,replyTo){
+  const alive=S.players.filter(p=>p.alive).map(p=>`#${p.seat}`).join(' ');
+  const lines=S.chat.filter(m=>!m.sys).slice(-14).map(m=>`#${m.seat}: ${m.text}`).join('\n');
+  let s=`第${S.day}天·白天。存活玩家：${alive}\n你的人设：${ai.persona||'普通玩家'}\n最近聊天：\n${lines}\n`;
+  if(replyTo!=null)s+=`你要回应 #${replyTo} 的发言。\n`;
+  s+=`请发言（用 #编号 指代玩家，不要暴露你是 AI）。`;
+  return s;
+}
+function genAiLine(ai,replyTo){
+  if(ai.role==='seer'&&!ai.revealed&&ai.checks.length&&Math.random()<0.7){
+    ai.revealed=true;const r=ai.checks[ai.checks.length-1];
+    return `我昨晚验了 #${r.target}，是${r.isWolf?'狼':'好人'}。`;
+  }
+  const others=S.players.filter(p=>p.alive&&p.seat!==ai.seat);
+  if(replyTo!=null&&Math.random()<0.65) return `#${replyTo} 你这话我不认同，我觉得你有点可疑。`;
+  const t=others[Math.floor(Math.random()*others.length)];
+  const pool=[`我先盯#${t.seat}，他刚才的解释绕了一圈，没正面回应关键点。`,`#${t.seat}的说法和前面不太一致，我想听他把时间线补完整。`,`目前信息还少，我不想跟票，但#${t.seat}的反应确实让我有点不舒服。`,`我倾向先保留意见，#${t.seat}如果是好人，应该能解释刚才为什么改口。`,`这轮我更在意发言逻辑，不是声音大就可信；#${t.seat}需要再说清楚。`];
+  const used=(ai.memory||[]); const fresh=pool.filter(x=>!used.includes(x)); return fresh[Math.floor(Math.random()*Math.max(1,fresh.length))]||pool[Math.floor(Math.random()*pool.length)];
+}
+
+function startVote(){
+  if(S.phase!=='day'&&S.phase!=='vote')return;
+  S.phase='vote';clearTimers();setTyping(null);setHeader();S.dayVotes=new Map();S.humanVote=null;
+  sys(`🗳️ 投票阶段：放逐一名你怀疑的玩家（AI 也会投）。`);
+  renderActionVote();
+  S.players.filter(p=>p.alive&&p.kind==='ai').forEach((ai,i)=>{
+    S.aiTimers.push(setTimeout(()=>{if(S.phase!=='vote'||!ai.alive)return;const s=aiVote(ai.seat);if(s!=null){S.dayVotes.set(ai.seat,s);sys(`#${ai.seat} 已投票。`);tryResolveVote();}},4500+i*4200));
+  });
+  S.aiTimers.push(setTimeout(()=>resolveVote(),14000));
+}
+function aiVote(seat){
+  const alive=S.players.filter(p=>p.alive&&p.seat!==seat);
+  if(!alive.length)return null;
+  const mention={};S.chat.forEach(m=>alive.forEach(p=>{if(m.text&&m.text.includes('#'+p.seat))mention[p.seat]=(mention[p.seat]||0)+1;}));
+  let best=null,bc=0;alive.forEach(p=>{const c=mention[p.seat]||0;if(c>bc){bc=c;best=p.seat;}});
+  if(best!=null&&bc>0)return best;
+  return alive[Math.floor(Math.random()*alive.length)].seat;
+}
+function renderActionVote(){
+  $('action').innerHTML=`<h4>🗳️ 投票 · 放逐一名玩家</h4><div class="opts" id="voteOpts"></div>`;
+  const wrap=$('voteOpts');
+  S.players.filter(p=>p.alive).forEach(p=>{
+    const b=document.createElement('button');b.className='opt vote';b.dataset.seat=p.seat;
+    b.innerHTML=av(p.seat,p.name)+`<span>${p.name}</span> <span class="rl" style="color:var(--muted)">#${p.seat}</span>`;
+    b.onclick=()=>onHumanVote(p.seat);
+    wrap.appendChild(b);
+  });
+}
+function onHumanVote(seat){
+  if(S.phase!=='vote'||S.humanVote!=null)return;
+  const t=S.players[seat];if(!t||!t.alive)return;
+  S.humanVote=seat;S.dayVotes.set(S.me.seat,seat);
+  [...$('voteOpts').children].forEach(c=>c.classList.toggle('sel',+c.dataset.seat===seat));
+  sys(`你投了 #${seat}。`);tryResolveVote();
+}
+function tryResolveVote(){if(S.dayVotes.size>=S.players.filter(p=>p.alive).length)setTimeout(resolveVote,400);}
+function resolveVote(){
+  if(S.phase!=='vote')return;clearTimers();setTyping(null);
+  const cnt={};S.dayVotes.forEach(s=>cnt[s]=(cnt[s]||0)+1);
+  let max=-1,tied=[];for(const s in cnt){const v=cnt[s];if(v>max){max=v;tied=[+s];}else if(v===max)tied.push(+s);}
+  const seat=tied.length?tied[Math.floor(Math.random()*tied.length)]:null;
+  let dead=null;if(seat!=null){const t=S.players[seat];if(t&&t.alive){t.alive=false;dead=t;}}
+  if(dead){sys(`🗳️ #${dead.seat} 被放逐。`);if(dead.role==='hunter')hunterShoot(dead.seat);}
+  else sys(`🗳️ 本轮无人被放逐。`);
+  renderRoster();
+  if(checkWin())return;
+  S.day++;startNight();
+}
+
+function checkWin(){
+  const a=S.players.filter(p=>p.alive&&p.kind==='ai').length;
+  const h=S.players.filter(p=>p.alive&&p.kind==='human').length;
+  if(a===0)return endGame('wolf');
+  if(h===0)return endGame('good');
+  return false;
+}
+function endGame(winner){
+  S.phase='over';clearTimers();setTyping(null);setHeader();switchScreen('over');
+  const win=winner==='wolf';
+  $('verdict').className='verdict '+(win?'win':'lose');
+  $('verdict').textContent=win?'🐺 狼人胜利':'🛡️ 好人胜利';
+  $('verdictSub').textContent=win?'所有 AI 出局，你伪装成功活到最后！':'你被投票放逐——伪装还不够像。';
+  const rev=$('reveal');rev.innerHTML='';
+  S.players.forEach(p=>{
+    const d=document.createElement('div');d.className='seat'+(p.alive?'':' dead');
+    d.innerHTML=av(p.seat,p.name)+`<div class="meta"><div class="nm">#${p.seat} ${p.name}${p.kind==='human'?' (你)':''}</div><div class="rl ${p.role}">${ROLE_INFO[p.role].label} · ${p.alive?'存活':'出局'}</div></div>`;
+    rev.appendChild(d);
+  });
+}
+
+/* ===================== 游戏渲染 ===================== */
+/* ===================== 渲染 ===================== */
+function switchScreen(name){['solo-start','game','over'].forEach(s=>$(s).classList.toggle('on',s===name));}
+function setHeader(){
+  const map={night:['🌙 黑夜','night'],day:['☀️ 白天','day'],vote:['🗳️ 投票','vote'],over:['结束','over']};
+  const [txt,cls]=map[S.phase]||['',''];
+  $('phaseTag').textContent=txt;$('phaseTag').className='badge '+cls;
+  $('dayTag').textContent='第 '+S.day+' 天';
+  $('mySeat').textContent=S.me?S.me.seat:'';
+}
+function renderRoster(){
+  const r=$('roster');r.innerHTML='';
+  S.players.forEach(p=>{
+    const li=document.createElement('div');li.className='seat'+(p.alive?'':' dead')+(p.kind==='human'?' me':'');
+    let rl='';
+    if(p.kind==='human')rl=`<span class="rl wolf">狼人(你)</span>`;
+    else rl=`<span class="rl">？？</span>`;
+    li.innerHTML=av(p.seat,p.name)+`<div class="meta"><div class="nm">#${p.seat} ${p.name}</div><div>${rl}</div></div>`;
+    r.appendChild(li);
+  });
+}
+function renderChat(){
+  const c=$('chat');c.innerHTML='';
+  S.chat.slice(-60).forEach(m=>{
+    if(m.sys){const d=document.createElement('div');d.className='msg sys';d.innerHTML=`<div class="s">${m.text}</div>`;c.appendChild(d);return;}
+    const mine=S.me&&m.seat===S.me.seat;
+    const d=document.createElement('div');d.className='msg'+(mine?' me':'');
+    d.innerHTML=av(m.seat,m.name)+`<div class="b"><div class="who">${m.name} · #${m.seat}</div><div class="tx">${escapeHtml(m.text)}</div></div>`;
+    c.appendChild(d);
+  });
+  c.scrollTop=c.scrollHeight;
+}
+
+/* ===================== 交互绑定 ===================== */
+$('aiMinus').onclick=()=>{S.pendingAI=Math.max(3,S.pendingAI-1);$('aiNum').textContent=S.pendingAI;$('totalNum').textContent=S.pendingAI+1;};
+$('aiPlus').onclick=()=>{S.pendingAI=Math.min(8,S.pendingAI+1);$('aiNum').textContent=S.pendingAI;$('totalNum').textContent=S.pendingAI+1;};
+function loadDsSettings(){const k=localStorage.getItem('dw_ds_key');if(k)$('dsKey').value=k;$('dsModel').value='gpt-5.6-sol';}
+loadDsSettings();
+$('dsKey').addEventListener('input',()=>localStorage.setItem('dw_ds_key',$('dsKey').value.trim()));
+$('btnStart').onclick=startSolo;
+$('btnAgain').onclick=()=>{S.chat=[];switchScreen('solo-start');};
+</script>
+</body>
+</html>
