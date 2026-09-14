@@ -39,6 +39,10 @@
   .title .w{color:var(--wolf)}
   .tagline{color:var(--muted);margin:10px auto 0;line-height:1.65;font-size:13.5px;max-width:34ch}
   .tagline b{color:var(--wolf);font-weight:700}
+  .intro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 4px}
+  .intro-card{padding:11px 9px;text-align:center;background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:var(--r-md)}
+  .intro-card span{display:block;font-size:20px;margin-bottom:3px}.intro-card b{display:block;font-size:12.5px}.intro-card small{display:block;color:var(--muted);font-size:10.5px;line-height:1.4;margin-top:3px}
+  .quick-start{margin-top:11px;text-align:center;color:var(--muted);font-size:11.5px;line-height:1.55}.quick-start b{color:var(--gold)}
 
   .field{margin:14px 0}
   .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
@@ -136,6 +140,7 @@
 
   /* 手机端：名单改为顶部横向滚动条，聊天占满 */
   @media (max-width:560px){
+    .intro-grid{gap:6px}.intro-card{padding:9px 5px}.intro-card small{font-size:10px}
     .board{flex-direction:column}
     .roster{flex-direction:row;width:auto;overflow-x:auto;padding-bottom:4px;gap:8px}
     .seat{flex:none;min-width:128px}
@@ -155,6 +160,11 @@
       <h1 class="title">AI伪装<span class="w">狼人杀</span></h1>
       <p class="tagline">你是唯一的<b>狼人</b>，其余 AI 扮演预言家 / 女巫 / 猎人 / 村民。夜晚刀掉 AI，白天伪装成 AI 带偏它们的投票。</p>
     </div>
+    <div class="intro-grid" aria-label="项目亮点">
+      <div class="intro-card"><span>🎭</span><b>伪装发言</b><small>用好人语气隐藏真实身份</small></div>
+      <div class="intro-card"><span>🌙</span><b>昼夜博弈</b><small>夜晚选择目标，白天影响投票</small></div>
+      <div class="intro-card"><span>🤖</span><b>AI 推理</b><small>每个角色会根据对话作出判断</small></div>
+    </div>
     <div class="panel">
       <div class="field"><label>你的昵称</label><input id="nick" type="text" placeholder="输入昵称（≤12字）" maxlength="12"></div>
       <div class="field"><label>AI 数量（你 + 他们 = 总人数）</label>
@@ -168,6 +178,7 @@
         <div class="r"><span class="ic">🏹</span><b>猎人</b>：出局可开枪</div>
       </div>
       <button class="btn" id="btnStart">开始单人游戏</button>
+      <div class="quick-start"><b>三步开始：</b>设置人数 → 记住自己的座位号 → 在夜晚和白天做出选择。</div>
       <p class="hint">AI 会慢慢回话（每条 <b>4~6 秒</b>）并接你的话；指代别人都用 <b>#编号</b>。</p>
       <details>
         <summary>怎么玩 / 规则</summary>
