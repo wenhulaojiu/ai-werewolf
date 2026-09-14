@@ -135,6 +135,13 @@
   .reveal{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:18px 0}
   .reveal .seat{width:100%}
   .status{font-size:13px;color:var(--moon);text-align:center;margin:10px 0 2px;min-height:18px;line-height:1.5}
+  .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:2px}
+  .dash-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:11px 12px;min-height:64px}
+  .dash-card h4{margin:0 0 5px;font-size:11px;color:var(--muted);letter-spacing:.04em}
+  .dash-card p{margin:0;font-size:12px;line-height:1.5;color:var(--ink)}
+  .dash-card .meter{height:5px;background:#0d0b0a;border-radius:99px;overflow:hidden;margin-top:7px}.dash-card .meter i{display:block;height:100%;background:var(--ember);border-radius:99px;width:0;transition:width .3s}
+  .phase-note{padding:9px 11px;border-radius:var(--r-sm);background:rgba(232,183,101,.08);border:1px solid rgba(232,183,101,.18);color:var(--gold);font-size:12px;line-height:1.5}
+  .recap-list{display:grid;gap:7px;text-align:left;margin:16px 0}.recap-item{padding:9px 11px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:var(--muted);font-size:12px}.recap-item b{color:var(--ink)}
 
   @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
@@ -210,6 +217,13 @@
       <span class="grow"></span>
       <span class="meinfo">你是 <b>狼人</b> · 座位 #<b id="mySeat">0</b></span>
     </div>
+    <div class="dashboard">
+      <div class="dash-card"><h4>当前任务</h4><p id="mission">隐藏身份，活到最后</p></div>
+      <div class="dash-card"><h4>存活情况</h4><p id="aliveInfo">—</p><div class="meter"><i id="aliveMeter"></i></div></div>
+      <div class="dash-card"><h4>AI 对你的平均怀疑度</h4><p id="suspicionInfo">等待白天发言</p><div class="meter"><i id="suspicionMeter"></i></div></div>
+      <div class="dash-card"><h4>最近局势</h4><p id="lastEvent">准备进入夜晚</p></div>
+    </div>
+    <div class="phase-note" id="phaseNote">夜晚：选择一个 AI 目标。关键不是杀谁，而是留下谁来替你发言。</div>
     <div class="board">
       <div class="roster" id="roster"></div>
       <div class="chatwrap">
@@ -225,6 +239,7 @@
       <div id="verdict" class="verdict"></div>
       <p id="verdictSub" style="color:var(--muted);margin:0"></p>
       <div class="reveal" id="reveal"></div>
+      <div class="recap-list" id="recapList"></div>
       <button class="btn again" id="btnAgain">再来一局</button>
     </div>
   </section>
@@ -371,7 +386,21 @@ function renderSuspicion(){
   const a=$('action'); if(!a||!S.me||S.phase!=='day')return;
   let box=$('suspicionPanel'); if(!box){box=document.createElement('div');box.id='suspicionPanel';box.className='banner';a.insertBefore(box,a.firstChild);}
   const ais=S.players.filter(p=>p.alive&&p.kind==='ai');
-  box.innerHTML='<b>AI 对你的怀疑度（估算）</b> '+ais.map(ai=>{const mine=S.chat.filter(m=>!m.sys&&m.seat===S.me.seat);let score=15;mine.forEach(m=>{const x=m.text||'';if(/怀疑|肯定|绝对|百分百/.test(x))score+=8;if((x.match(/#\d+/g)||[]).length===0)score+=3;if(x.length<8||x.length>120)score+=2;});const aiTalk=S.chat.filter(m=>!m.sys&&m.seat===ai.seat);if(aiTalk.some(m=>/你说得对|我也这么想/.test(m.text||'')))score+=4;const pct=Math.min(95,score);return `#${ai.seat} ${pct}%`;}).join(' · ');
+  box.innerHTML='<b>AI 对你的怀疑度（估算）</b> '+ais.map(ai=>{const pct=suspicionFor(ai);return `#${ai.seat} ${pct}%`;}).join(' · ');
+  updateDashboard();
+}
+function suspicionFor(ai){const mine=S.chat.filter(m=>!m.sys&&m.seat===S.me.seat);let score=15;mine.forEach(m=>{const x=m.text||'';if(/怀疑|肯定|绝对|百分百/.test(x))score+=8;if((x.match(/#\d+/g)||[]).length===0)score+=3;if(x.length<8||x.length>120)score+=2;});const aiTalk=S.chat.filter(m=>!m.sys&&m.seat===ai.seat);if(aiTalk.some(m=>/你说得对|我也这么想/.test(m.text||'')))score+=4;return Math.min(95,score);}
+function updateDashboard(){
+  if(!S.me)return;
+  const alive=S.players.filter(p=>p.alive).length, total=S.players.length;
+  $('aliveInfo').textContent=`${alive} / ${total} 人存活`;
+  $('aliveMeter').style.width=`${Math.round(alive/total*100)}%`;
+  const ais=S.players.filter(p=>p.alive&&p.kind==='ai');
+  const avg=ais.length?Math.round(ais.reduce((sum,ai)=>sum+suspicionFor(ai),0)/ais.length):0;
+  $('suspicionInfo').textContent=S.phase==='day'||S.phase==='vote'?`平均 ${avg}% · 越低越安全`:'白天发言后显示';
+  $('suspicionMeter').style.width=`${avg}%`;
+  const notes={night:'夜晚：选择一个 AI 目标。留下谁，决定明天谁会替你发言。',day:'白天：用具体理由发言，少下绝对结论，避免让所有人同时注意到你。',vote:'投票：观察谁被多人点名，也可以利用混乱把票引向其他 AI。',over:'本局结束：查看身份揭示和你的伪装表现。'};
+  $('phaseNote').textContent=notes[S.phase]||'';
 }
 function pushChat(seat,name,text,mine){
   text=String(text||'').slice(0,160);
@@ -511,6 +540,8 @@ function endGame(winner){
   $('verdict').className='verdict '+(win?'win':'lose');
   $('verdict').textContent=win?'🐺 狼人胜利':'🛡️ 好人胜利';
   $('verdictSub').textContent=win?'所有 AI 出局，你伪装成功活到最后！':'你被投票放逐——伪装还不够像。';
+  const days=Math.max(1,S.day), alive=S.players.filter(p=>p.alive).length;
+  $('recapList').innerHTML=`<div class="recap-item"><b>生存表现：</b>你在第 ${days} 天结束，终局存活 ${alive} 人。</div><div class="recap-item"><b>伪装建议：</b>${win?'你成功控制了发言节奏，可以继续练习更低调的带票方式。':'尝试少用绝对判断，多引用具体发言，并保留一个可以被怀疑的替罪目标。'}</div><div class="recap-item"><b>下一局挑战：</b>${win?'不使用连续强势指控完成胜利。':'让 AI 先互相争论，再在最后阶段推动投票。'}</div>`;
   const rev=$('reveal');rev.innerHTML='';
   S.players.forEach(p=>{
     const d=document.createElement('div');d.className='seat'+(p.alive?'':' dead');
@@ -528,6 +559,7 @@ function setHeader(){
   $('phaseTag').textContent=txt;$('phaseTag').className='badge '+cls;
   $('dayTag').textContent='第 '+S.day+' 天';
   $('mySeat').textContent=S.me?S.me.seat:'';
+  updateDashboard();
 }
 function renderRoster(){
   const r=$('roster');r.innerHTML='';
@@ -539,6 +571,7 @@ function renderRoster(){
     li.innerHTML=av(p.seat,p.name)+`<div class="meta"><div class="nm">#${p.seat} ${p.name}</div><div>${rl}</div></div>`;
     r.appendChild(li);
   });
+  updateDashboard();
 }
 function renderChat(){
   const c=$('chat');c.innerHTML='';
@@ -550,6 +583,7 @@ function renderChat(){
     c.appendChild(d);
   });
   c.scrollTop=c.scrollHeight;
+  updateDashboard();
 }
 
 /* ===================== 交互绑定 ===================== */
