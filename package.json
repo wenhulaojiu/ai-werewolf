@@ -1,0 +1,12 @@
+{
+  "name": "ai-werewolf",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AI 伪装狼人杀：单人社交推理网页游戏",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node tools/check-project.mjs"
+  },
+  "engines": { "node": ">=18" }
+}

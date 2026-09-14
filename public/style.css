@@ -1,0 +1,5 @@
+/* 工程版扩展样式：核心兼容入口仍在根目录 index.html。 */
+:root { --project-accent:#e07a5f; --project-gold:#e8b765; }
+.project-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border:1px solid rgba(232,183,101,.3); border-radius:999px; color:var(--project-gold); font-size:11px; background:rgba(232,183,101,.08); }
+.project-panel { border:1px solid rgba(255,233,205,.12); border-radius:14px; padding:12px; background:rgba(255,255,255,.035); color:#a89c8c; font-size:12px; line-height:1.6; }
+.project-panel b { color:#f3ece2; }
